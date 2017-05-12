@@ -27,15 +27,19 @@
   (let [job-periods (get @times-db job)
         last-period (last job-periods)]
     (if (or (empty? job-periods) (:stop last-period))
-      (swap! times-db update job conj {:start (System/currentTimeMillis) :stop nil})
-      (println "Job already in progress"))))
+      (do
+        (swap! times-db update job conj {:start (System/currentTimeMillis) :stop nil})
+        (format "resumed %s" job))
+      "Job already in progress")))
 
 (defn stop! [job]
   (let [job-periods (get @times-db job)
         last-period-index (dec (count job-periods))]
     (if-not (get-in job-periods [last-period-index :stop])
-      (swap! times-db assoc-in [job last-period-index :stop] (System/currentTimeMillis))
-      (println "Job already in progress"))))
+      (do
+        (swap! times-db assoc-in [job last-period-index :stop] (System/currentTimeMillis))
+        (format "stopped %s" job))
+      "Job already stopped")))
 
 (defn in-progress? [job]
   (let [job-periods (get @times-db job)]
