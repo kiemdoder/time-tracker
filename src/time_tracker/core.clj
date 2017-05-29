@@ -1,6 +1,7 @@
 (ns time-tracker.core
   (:require
-   [clojure.edn :as edn]))
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]))
 
 (defonce cfg (atom {:times-db-file "times-db.edn"}))
 (defonce times-db (atom nil))
@@ -21,7 +22,9 @@
   (load-cfg!)
   (load-times!)
   (add-watch times-db :times-db (fn [_ _ _ new-state]
-                                  (spit (:times-db-file @cfg) new-state))))
+                                  (let [file-path (:times-db-file @cfg)]
+                                    (.renameTo (io/file file-path) (io/file (str file-path ".0")))
+                                    (spit file-path new-state)))))
 
 (defn resume! [job]
   (let [job-periods (get @times-db job)
@@ -61,6 +64,12 @@
 (defn total-minutes [job]
   (let [millis (sum-times (get @times-db job))]
     (quot millis (* 1000 60))))
+
+(defn addHour [job]
+  (let [print-hours (fn [] (println (/ (total-minutes job) 60.0)))]
+    (print-hours)
+    (swap! times-db update job #(conj % {:start 0 :stop (* 1 60 60 1000)}))
+    (print-hours)))
 
 (defn -main [& args]
   (println "toets 123"))
