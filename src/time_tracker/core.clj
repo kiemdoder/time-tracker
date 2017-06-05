@@ -1,10 +1,15 @@
 (ns time-tracker.core
   (:require
    [clojure.edn :as edn]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io])
+  (:import java.text.SimpleDateFormat))
 
 (defonce cfg (atom {:times-db-file "times-db.edn"}))
 (defonce times-db (atom nil))
+
+(def month-formatter (SimpleDateFormat. "yyyy-MM"))
+(defn month [d]
+  (.format month-formatter d))
 
 (defn load-cfg! []
   (let [cfg-str (slurp "time-tracker-cfg.edn")
@@ -65,6 +70,12 @@
   (let [millis (sum-times (get @times-db job))]
     (quot millis (* 1000 60))))
 
+(defn total-hours-per-month [job]
+  (->> @times-db
+       job
+       (group-by #(month (:start %)))
+       (map (fn [[k v]] [k (/ (sum-times v) (* 1000 60 60.0))]))))
+
 (defn addHour [job]
   (let [print-hours (fn [] (println (/ (total-minutes job) 60.0)))]
     (print-hours)
@@ -80,5 +91,7 @@
   (stop! :wso2)
   (in-progress? :wso2)
   (/ (total-minutes :wso2) 60.0)
+  (doseq [m (total-hours-per-month :wso2)]
+    (println (apply format "%s %.2fh" m)))
   
   )
